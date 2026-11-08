@@ -3,38 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบจัดการเงินกองกลางห้องเรียน</title>
-    <!-- Tailwind CSS สำหรับดีไซน์ที่สวยงาม ทันสมัย -->
+    <title>ระบบจัดการเงินกองกลางห้องเรียน (Real-Time)</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Supabase JS Client สำหรับเชื่อมต่อฐานข้อมูล -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Font -->
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Sarabun', sans-serif; }
-    </style>
+    <style>body { font-family: 'Sarabun', sans-serif; }</style>
 </head>
 <body class="bg-slate-50 text-slate-800">
 
-    <!-- หน้าจอเข้าสู่ระบบ (Login Modal) -->
+    <!-- หน้าจอเข้าสู่ระบบ / ตั้งรหัสผ่าน -->
     <div id="login-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
         <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 border border-slate-100">
             <div class="text-center mb-8">
-                <div class="bg-blue-600 text-white w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl shadow-lg shadow-blue-500/30">💰</div>
-                <h2 class="text-2xl font-bold text-slate-900">ระบบเงินกองกลางห้องเรียน</h2>
-                <p class="text-sm text-slate-500 mt-1">กรุณาเข้าสู่ระบบเพื่อใช้งาน</p>
+                <div class="bg-blue-600 text-white w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl shadow-lg shadow-blue-500/30">🔐</div>
+                <h2 class="text-2xl font-bold text-slate-900">เข้าสู่ระบบห้องเรียน</h2>
+                <p class="text-sm text-slate-500 mt-1">ระบบจัดการเงินกองกลาง ม.4/14</p>
             </div>
-            <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
+            <form onsubmit="handleLogin(event)" class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1">เลือกประเภทผู้ใช้งาน</label>
-                    <select id="login-role" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-                        <option value="admin">ผู้ดูแลระบบ (Admin / เหรัญญิก)</option>
+                    <select id="login-role" onchange="toggleLoginForm()" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white">
+                        <option value="admin">ผู้ดูแลระบบ (Admin)</option>
                         <option value="student">สมาชิกห้องเรียน (Student)</option>
                     </select>
                 </div>
-                <div id="student-id-field">
-                    <label class="block text-sm font-medium text-slate-700 mb-1">รหัสนักเรียน / เลขที่</label>
-                    <input type="text" id="login-username" placeholder="เช่น 10 หรือ ม.4/14" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1" id="username-label">รหัสผ่าน Admin</label>
+                    <input type="password" id="login-pass" placeholder="กรอกรหัสผ่าน" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200">
                 </div>
                 <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-xl shadow-lg shadow-blue-600/30 transition-all">
                     เข้าสู่ระบบ
@@ -43,9 +38,8 @@
         </div>
     </div>
 
-    <!-- โครงสร้างหลักของแอปพลิเคชัน -->
+    <!-- โครงสร้างหลัก -->
     <div id="app-container" class="hidden min-h-screen flex flex-col md:flex-row">
-        <!-- Sidebar เมนูด้านข้าง -->
         <aside class="w-full md:w-64 bg-slate-900 text-white flex flex-col justify-between p-6">
             <div>
                 <div class="flex items-center gap-3 mb-8">
@@ -55,129 +49,97 @@
                         <p class="text-xs text-slate-400">ม.4/14 โยธินบูรณะ</p>
                     </div>
                 </div>
-                <nav id="sidebar-menu" class="space-y-1">
-                    <!-- เมนูจะเปลี่ยนไปตามสิทธิ์ Admin / Student -->
-                </nav>
+                <nav id="sidebar-menu" class="space-y-1"></nav>
             </div>
             <div class="pt-6 border-t border-slate-800">
-                <button onclick="handleLogout()" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-red-400 hover:bg-red-500/10 transition-colors text-sm font-medium">
-                    🚪 ออกจากระบบ
-                </button>
+                <button onclick="location.reload()" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-red-400 hover:bg-red-500/10 text-sm font-medium">🚪 ออกจากระบบ</button>
             </div>
         </aside>
 
-        <!-- พื้นที่แสดงเนื้อหาหลัก -->
         <main class="flex-1 p-6 md:p-10 overflow-y-auto">
             <header class="flex justify-between items-center mb-8 pb-4 border-b border-slate-200">
                 <div>
                     <h2 id="page-title" class="text-2xl font-bold text-slate-900">Dashboard</h2>
-                    <p id="page-subtitle" class="text-sm text-slate-500">ภาพรวมสถานะการเงินกองกลางห้องเรียน</p>
+                    <p id="page-subtitle" class="text-sm text-slate-500">ระบบอัปเดตข้อมูลแบบ Real-time</p>
                 </div>
-                <div class="flex items-center gap-3">
-                    <span id="user-badge" class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">Admin</span>
-                </div>
+                <span id="user-badge" class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">Admin</span>
             </header>
-
-            <!-- คอนเทนต์แต่ละหน้า -->
-            <div id="main-content">
-                <!-- เนื้อหาจะถูกเรนเดอร์สลับเปลี่ยนตรงนี้ด้วย JavaScript -->
-            </div>
+            <div id="main-content"></div>
         </main>
     </div>
 
-    <!-- JavaScript สำหรับควบคุมระบบทั้งหมด -->
     <script>
-        // ตั้งค่าการเชื่อมต่อ Supabase ของคุณ (นำค่าที่ก๊อปปี้มาใส่ตรงนี้)
+        // ตั้งค่าการเชื่อมต่อ Supabase
         const SUPABASE_URL = 'https://yogntkrxycwjjbzzrrna.supabase.co';
-        const SUPABASE_ANON_KEY = 'sbp_gidsigtsyivsmwesopktw__9un_...'; // ใส่ Publishable Key ของคุณที่นี่
+        const SUPABASE_ANON_KEY = 'วาง_Publishable_Key_ของคุณที่นี่'; // ใส่ Publishable Key ของคุณ
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let currentUser = null;
+        const PROMPTPAY_NUMBER = '0946766469'; // กำหนดเบอร์พร้อมเพย์ตามที่คุณต้องการ
 
-        // จัดการการ Login
+        function toggleLoginForm() {
+            const role = document.getElementById('login-role').value;
+            document.getElementById('username-label').innerText = role === 'admin' ? 'รหัสผ่าน Admin' : 'เลขที่ / รหัสนักเรียน';
+        }
+
         function handleLogin(event) {
             event.preventDefault();
             const role = document.getElementById('login-role').value;
-            const username = document.getElementById('login-username').value;
+            const pass = document.getElementById('login-pass').value;
 
-            currentUser = { role, username: username || 'Admin' };
+            // ตั้งรหัสผ่าน Admin ที่นี่ (เช่น admin1234) หรือเช็ครหัสผ่าน
+            if(role === 'admin' && pass !== 'admin1234') {
+                alert('รหัสผ่าน Admin ไม่ถูกต้อง! (รหัสเริ่มต้น: admin1234)');
+                return;
+            }
+
+            currentUser = { role };
             document.getElementById('login-modal').classList.add('hidden');
             document.getElementById('app-container').classList.remove('hidden');
-            
             document.getElementById('user-badge').innerText = role === 'admin' ? 'ผู้ดูแลระบบ (Admin)' : 'นักเรียน (Student)';
             renderMenu();
-            loadDashboard();
+            if(role === 'admin') loadAdminDashboard();
+            else loadStudentPayment();
         }
 
-        // ออกจากระบบ
-        function handleLogout() {
-            location.reload();
-        }
-
-        // เรนเดอร์เมนูตามสิทธิ์
         function renderMenu() {
             const menu = document.getElementById('sidebar-menu');
             if (currentUser.role === 'admin') {
                 menu.innerHTML = `
-                    <a href="#" onclick="loadDashboard()" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-600 text-white font-medium text-sm">📊 Dashboard</a>
-                    <a href="#" onclick="loadAdminStudents()" class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-300 hover:bg-slate-800 text-sm">👥 จัดการสมาชิก</a>
-                    <a href="#" onclick="loadAdminSettings()" class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-300 hover:bg-slate-800 text-sm">⚙️ ตั้งค่าพร้อมเพย์</a>
+                    <a href="#" onclick="loadAdminDashboard()" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-600 text-white font-medium text-sm">📊 Dashboard & สมาชิก</a>
+                    <a href="#" onclick="loadAdminPayments()" class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-300 hover:bg-slate-800 text-sm">✔️ ตรวจสอบสลิปโอนเงิน</a>
                 `;
             } else {
                 menu.innerHTML = `
-                    <a href="#" onclick="loadStudentDashboard()" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-600 text-white font-medium text-sm">🏠 หน้าแรกของฉัน</a>
-                    <a href="#" onclick="loadStudentPayment()" class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-300 hover:bg-slate-800 text-sm">💳 ชำระเงิน / QR Code</a>
+                    <a href="#" onclick="loadStudentPayment()" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-600 text-white font-medium text-sm">💳 ชำระเงิน / QR Code</a>
                 `;
             }
         }
 
-        // โหลดหน้า Dashboard Admin
-        async function loadDashboard() {
-            document.getElementById('page-title').innerText = 'Dashboard ผู้ดูแลระบบ';
-            document.getElementById('page-subtitle').innerText = 'สรุปยอดเงินกองกลางและสถานะการชำระเงินทั้งหมด';
-            
-            document.getElementById('main-content').innerHTML = `
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                        <p class="text-sm text-slate-500 font-medium">ยอดเงินกองกลางทั้งหมด</p>
-                        <h3 class="text-3xl font-bold text-slate-900 mt-2">฿ 2,500</h3>
-                    </div>
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                        <p class="text-sm text-slate-500 font-medium">ชำระครบแล้ว</p>
-                        <h3 class="text-3xl font-bold text-emerald-600 mt-2">15 คน</h3>
-                    </div>
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                        <p class="text-sm text-slate-500 font-medium">ยังค้างชำระ</p>
-                        <h3 class="text-3xl font-bold text-rose-600 mt-2">5 คน</h3>
-                    </div>
-                </div>
-            `;
-        }
+        // --- ส่วนของ Admin: จัดการสมาชิกและดูภาพรวมแบบ Real-Time ---
+        async function loadAdminDashboard() {
+            document.getElementById('page-title').innerText = 'จัดการสมาชิกและกองกลาง';
+            document.getElementById('page-subtitle').innerText = 'ข้อมูลอัปเดตอัตโนมัติแบบ Real-time';
 
-        // โหลดหน้าจัดการสมาชิก (Admin เพิ่ม/ลบ/แก้ไขนักเรียน)
-        async function loadAdminStudents() {
-            document.getElementById('page-title').innerText = 'จัดการสมาชิกห้องเรียน';
-            document.getElementById('page-subtitle').innerText = 'เพิ่ม แก้ไข หรือลบรายชื่อสมาชิกในห้อง';
-
-            let { data: students, error } = await _supabase.from('students').select('*').order('number');
+            let { data: students } = await _supabase.from('students').select('*').order('number');
 
             let rows = '';
             if(students) {
                 students.forEach(s => {
                     rows += `<tr>
-                        <td class="px-6 py-4">${s.number}</td>
-                        <td class="px-6 py-4">${s.student_id}</td>
+                        <td class="px-6 py-4">${s.number || '-'}</td>
+                        <td class="px-6 py-4">${s.student_id || '-'}</td>
                         <td class="px-6 py-4 font-medium">${s.name}</td>
-                        <td class="px-6 py-4"><span class="px-2.5 py-1 bg-amber-100 text-amber-700 rounded-full text-xs">${s.status || 'รอชำระ'}</span></td>
+                        <td class="px-6 py-4"><span class="px-2.5 py-1 bg-amber-100 text-amber-700 rounded-full text-xs">${s.status || 'ยังไม่ชำระ'}</span></td>
                     </tr>`;
                 });
             }
 
             document.getElementById('main-content').innerHTML = `
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-6">
-                    <h3 class="font-bold text-lg mb-4">เพิ่มรายชื่อนักเรียนใหม่</h3>
+                    <h3 class="font-bold text-lg mb-4">➕ เพิ่มรายชื่อนักเรียน</h3>
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <input type="text" id="new-num" placeholder="เลขที่" class="px-4 py-2 rounded-xl border border-slate-200">
+                        <input type="number" id="new-num" placeholder="เลขที่" class="px-4 py-2 rounded-xl border border-slate-200">
                         <input type="text" id="new-id" placeholder="รหัสนักเรียน" class="px-4 py-2 rounded-xl border border-slate-200">
                         <input type="text" id="new-name" placeholder="ชื่อ-นามสกุล" class="px-4 py-2 rounded-xl border border-slate-200">
                         <button onclick="addNewStudent()" class="bg-blue-600 text-white font-medium py-2 rounded-xl hover:bg-blue-700">บันทึกรายชื่อ</button>
@@ -188,49 +150,48 @@
                         <thead class="bg-slate-50 border-b border-slate-100 text-xs text-slate-500 uppercase">
                             <tr><th class="px-6 py-4">เลขที่</th><th class="px-6 py-4">รหัส</th><th class="px-6 py-4">ชื่อ-นามสกุล</th><th class="px-6 py-4">สถานะ</th></tr>
                         </thead>
-                        <tbody class="divide-y divide-slate-100 text-sm">${rows || '<tr><td colspan="4" class="px-6 py-4 text-center text-slate-400">ยังไม่มีข้อมูลนักเรียน</td></tr>'}</tbody>
+                        <tbody class="divide-y divide-slate-100 text-sm">${rows || '<tr><td colspan="4" class="px-6 py-4 text-center text-slate-400">ยังไม่มีข้อมูล</td></tr>'}</tbody>
                     </table>
                 </div>
             `;
         }
 
-        // ฟังก์ชันบันทึกนักเรียนลง Supabase
         async function addNewStudent() {
             const number = document.getElementById('new-num').value;
             const student_id = document.getElementById('new-id').value;
             const name = document.getElementById('new-name').value;
 
-            const { error } = await _supabase.from('students').insert([{ number, student_id, name, status: 'pending' }]);
+            const { error } = await _supabase.from('students').insert([{ number, student_id, name, status: 'รอชำระเงิน' }]);
             if(error) alert('เกิดข้อผิดพลาด: ' + error.message);
-            else { alert('เพิ่มสำเร็จ!'); loadAdminStudents(); }
+            else { alert('เพิ่มสำเร็จ!'); loadAdminDashboard(); }
         }
 
-        // โหลดหน้าชำระเงินและ QR Code PromptPay สำหรับนักเรียน
+        // --- ส่วนของนักเรียน: หน้าชำระเงินพร้อม QR Code เบอร์ 0946766469 ---
         function loadStudentPayment() {
             document.getElementById('page-title').innerText = 'ชำระเงินกองกลาง';
-            document.getElementById('page-subtitle').innerText = 'สแกน QR Code PromptPay เพื่อโอนเงินเข้ากองกลางห้องเรียน';
+            document.getElementById('page-subtitle').innerText = 'สแกน QR Code พร้อมเพย์เพื่อโอนเข้าบัญชีกลาง';
 
             document.getElementById('main-content').innerHTML = `
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 text-center">
-                        <h3 class="font-bold text-lg mb-2">QR Code พร้อมเพย์ (PromptPay)</h3>
-                        <p class="text-sm text-slate-500 mb-6">สแกนผ่านแอปธนาคารเพื่อชำระเงินจำนวน <span class="text-blue-600 font-bold">฿500.00</span></p>
-                        <!-- แสดง QR Code (ดึงจากบริการสร้าง PromptPay QR ฟรีตามยอดเงิน) -->
+                        <h3 class="font-bold text-lg mb-2">พร้อมเพย์: ${PROMPTPAY_NUMBER}</h3>
+                        <p class="text-sm text-slate-500 mb-6">สแกนผ่านแอปธนาคารเพื่อโอนเงินกองกลาง</p>
                         <div class="bg-slate-50 p-4 rounded-2xl inline-block border border-slate-200 mb-4">
-                            <img src="https://promptpay.io/0812345678/500.png" alt="PromptPay QR Code" class="w-64 h-64 mx-auto rounded-lg">
+                            <!-- สร้าง QR Code พร้อมเพย์อิงตามเบอร์ 0946766469 อัตโนมัติ -->
+                            <img src="https://promptpay.io/${PROMPTPAY_NUMBER}/500.png" alt="PromptPay QR Code" class="w-64 h-64 mx-auto rounded-lg">
                         </div>
                         <p class="text-xs text-slate-400">ชื่อบัญชี: กองกลางห้องเรียน ม.4/14</p>
                     </div>
                     <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
                         <h3 class="font-bold text-lg mb-4">แจ้งการชำระเงิน (อัปโหลดสลิป)</h3>
-                        <form onsubmit="alert('แจ้งชำระเงินสำเร็จ! รอผู้ดูแลระบบตรวจสอบ'); return false;" class="space-y-4">
+                        <form onsubmit="submitPayment(event)" class="space-y-4">
                             <div>
-                                <label class="block text-sm font-medium text-slate-700 mb-1">จำนวนเงินที่โอน</label>
-                                <input type="number" value="500" class="w-full px-4 py-2.5 rounded-xl border border-slate-200">
+                                <label class="block text-sm font-medium text-slate-700 mb-1">ชื่อ-นามสกุล ของผู้โอน</label>
+                                <input type="text" id="pay-name" placeholder="ระบุชื่อของคุณ" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200">
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-slate-700 mb-1">อัปโหลดสลิปโอนเงิน</label>
-                                <input type="file" class="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm">
+                                <label class="block text-sm font-medium text-slate-700 mb-1">จำนวนเงิน</label>
+                                <input type="number" id="pay-amount" value="500" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200">
                             </div>
                             <button type="submit" class="w-full bg-blue-600 text-white font-medium py-3 rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-600/30">ยืนยันการแจ้งโอน</button>
                         </form>
@@ -239,19 +200,34 @@
             `;
         }
 
-        function loadStudentDashboard() {
-            document.getElementById('page-title').innerText = 'แดชบอร์ดส่วนตัว';
-            document.getElementById('page-subtitle').innerText = 'สถานะการจ่ายเงินกองกลางของคุณ';
-            document.getElementById('main-content').innerHTML = `<div class="bg-white p-6 rounded-2xl border border-slate-100"><h3 class="font-bold text-lg">ยอดที่ต้องชำระ: ฿500</h3><p class="text-slate-500 text-sm mt-1">สถานะ: <span class="text-amber-600 font-semibold">ยังไม่ชำระเงิน</span></p></div>`;
+        async function submitPayment(e) {
+            e.preventDefault();
+            const name = document.getElementById('pay-name').value;
+            const amount = document.getElementById('pay-amount').value;
+
+            const { error } = await _supabase.from('payments').insert([{ student_id: name, amount: amount, status: 'รอตรวจสอบ' }]);
+            if(error) alert('เกิดข้อผิดพลาด: ' + error.message);
+            else alert('แจ้งชำระเงินสำเร็จ! Admin จะทำการตรวจสอบยอดเงิน');
         }
 
-        function loadAdminSettings() {
-            document.getElementById('page-title').innerText = 'ตั้งค่าระบบ';
-            document.getElementById('page-subtitle').innerText = 'ตั้งค่าหมายเลขพร้อมเพย์สำหรับรับเงิน';
-            document.getElementById('main-content').innerHTML = `<div class="bg-white p-6 rounded-2xl border border-slate-100"><label class="block text-sm font-medium mb-1">เบอร์พร้อมเพย์รับเงิน</label><input type="text" value="0812345678" class="w-full md:w-1/2 px-4 py-2 rounded-xl border border-slate-200 mb-4"><br><button onclick="alert('บันทึกสำเร็จ')" class="bg-blue-600 text-white px-6 py-2 rounded-xl">บันทึกค่า</button></div>`;
+        async function loadAdminPayments() {
+            document.getElementById('page-title').innerText = 'ตรวจสอบรายการโอนเงิน';
+            document.getElementById('page-subtitle').innerText = 'รายการสลิปที่รอยืนยัน';
+            let { data: payments } = await _supabase.from('payments').select('*');
+            let rows = '';
+            if(payments) {
+                payments.forEach(p => {
+                    rows += `<tr><td class="px-6 py-4">${p.student_id}</td><td class="px-6 py-4">฿${p.amount}</td><td class="px-6 py-4">${p.status}</td></tr>`;
+                });
+            }
+            document.getElementById('main-content').innerHTML = `<div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden"><table class="w-full text-left"><thead class="bg-slate-50 border-b text-xs text-slate-500 uppercase"><tr><th class="px-6 py-4">ผู้โอน</th><th class="px-6 py-4">จำนวนเงิน</th><th class="px-6 py-4">สถานะ</th></tr></thead><tbody class="divide-y text-sm">${rows || '<tr><td colspan="3" class="px-6 py-4 text-center text-slate-400">ยังไม่มีรายการแจ้งโอน</td></tr>'}</tbody></table></div>`;
         }
+
+        // --- เปิดใช้งานระบบ Real-time ซิงค์ข้อมูลอัตโนมัติ ---
+        _supabase.channel('public:students')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'students' }, payload => {
+                if(currentUser && currentUser.role === 'admin') loadAdminDashboard();
+            }).subscribe();
     </script>
 </body>
 </html>
-
-
